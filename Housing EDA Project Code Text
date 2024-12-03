@@ -2,13 +2,13 @@
   select *
   from layoffs
 
-#after inspection we create a list of tasks to complete the data cleaning process:
+#After inspection we created a list of tasks to complete the data cleaning process:
 
   #tasks
-	  #step 1 - removing duplicate data
-	  #step 2 - standardize data
-	  #step 3 - look at null/blank values
-    #step 4 - remove columns/rows that aren't necessary
+	#step 1 - removing duplicate data
+	#step 2 - standardize data
+	#step 3 - look at null/blank values
+    	#step 4 - remove columns/rows that aren't necessary
 
 #Before manipulating the data it is good practice to create a copy of the dataset in MYSQL so that the original data can be brough back in case of an irreversible mistake:
   create table layoffs_staging
