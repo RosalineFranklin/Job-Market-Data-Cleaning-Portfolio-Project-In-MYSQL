@@ -1,4 +1,4 @@
-In this project we took raw housing data and trasnformed it using MySQL to make it more usable for analytics.
+In this project we took raw job market data and trasnformed it using MySQL to make it more usable for analytics.
 
 Skills used:
   Removed Duplcate Data:
