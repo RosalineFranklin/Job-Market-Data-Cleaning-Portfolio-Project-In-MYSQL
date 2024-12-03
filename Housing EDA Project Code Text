@@ -22,7 +22,6 @@
 	from layoffs_staging;
 
 
-
 --------------------------------------------------------------------------------  Step 1 - removing duplicate data:  ------------------------------------------------------------------------------------------------------------
 #We used used row_number() and a CTE to determine duplicate data and then created a new table called staging_2 to add the row_number in the table to manipulate the data to remove duplicates.
 
@@ -46,9 +45,9 @@
   ;
 
 #While inspecting our data we found the company "Casper" to be duplicate data because it had a row number greater than 1:
-    select *
-    from layoffs_stagingw
-    where company = 'Casper';
+  select *
+  from layoffs_staging
+  where company = 'Casper';
 
 #We then removed the found duplicate data by creating a new table copying our current data including the row_number as a column so we can use to manipulate our data. We used the engine built in MYSQL to perform this step:
   CREATE TABLE `layoffs_staging2` 
@@ -67,9 +66,14 @@
   ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 #Testing to make sure the new table reads in all data:
-  select *,
-  row_number()
-  over(partition by company, location, industry, total_laid_off, percentage_laid_off, `date`, stage, country, funds_raised_millions) as row_num
+  select *
+  from layoffs_staging2;
+
+#Inserting our row number data into the new row_num column 
+  insert into layoffs_staging2
+	select *,
+  	row_number()
+  	over(partition by company, location, industry, total_laid_off, percentage_laid_off, `date`, stage, country, funds_raised_millions) as row_num
 	from layoffs_staging;
 
 #Removing the duplicate data by using our new column - any row_num that is greater than 1 is now considered duplicate data:
@@ -112,5 +116,95 @@
   order by 1;;
 
 #We then moved on to correcting our dates furthering data standardization. In our dataset the date datatype was a string. We wanted to change it into a date datatype:
+  select `date`,
+  str_to_date(`date`, '%m/%d/%Y')
+  from layoffs_staging2;
 
-  
+  update layoffs_staging2
+  set `date` = str_to_date(`date`, '%m/%d/%Y');
+
+  select `date`
+  from layoffs_staging2
+  order by 1;
+
+#We altered the table with this line of code *note it is important to always use your staged data and not alter the original data*
+  alter table layoffs_staging2
+  modify column `date` date;
+
+  select *
+  from layoffs_staging2;
+
+
+--------------------------------------------------------------------------------  Step 3 - Working with null/blank Values:  -----------------------------------------------------------------------------------------------------
+#Our next step was to look for null/blank values and eiter replace or remove depending on the situation.
+  select *
+  from layoffs_staging2
+  where total_laid_off is null and percentage_laid_off is null;
+
+#We found there were some null entries and we started to look at what we cand do with them.  The "Industry" column had some null entries and we started there.
+  select distinct industry
+  from layoffs_staging2
+  where industry is null 
+  or industry = '';
+
+  select *
+  from layoffs_staging2
+  where industry is null
+  or industry = '';
+
+#We discovered "Airbnb" had null/blank values and we double checked for other errors.
+  select *
+  from layoffs_staging2
+  where company = 'Airbnb';
+
+#We then joined our table with itself to see all null/blank values
+
+  select t1.company, t1.industry, t2.company, t2.industry
+  from layoffs_staging2 as t1
+  join layoffs_staging2 as t2
+	on t1.company = t2.company
+	and t1.location = t2.location
+  where (t1.industry is null or t1.industry = '')
+  and t2.industry is not null;
+
+#We then updated our blank values and made them into null values
+  update layoffs_staging2
+  set industry = null
+  where industry = '';
+
+#We used a self join once again and then delete to remove rows with the null values.
+  update layoffs_staging2 as t1
+	join layoffs_staging2 as t2
+	on t1.company = t2.company
+  set t1.industry = t2.industry
+  where t1.industry is null
+  and t2.industry is not null;
+
+  select *
+  from layoffs_staging2
+  where company like 'bal%';
+
+  select *
+  from layoffs_staging2
+  where total_laid_off is null and percentage_laid_off is null;
+
+  delete
+  from layoffs_staging2
+  where total_laid_off is null and percentage_laid_off is null;
+
+  select *
+  from layoffs_staging2;
+
+
+--------------------------------------------------------------------------------  Step 4 - Removing Unnecessary Columns:  -------------------------------------------------------------------------------------------------------
+#In this step we looked at which columns were unnecessary and removed them.  In our dataset the only column we needed to remove was the "row_num" column we made earlier
+
+  alter table layoffs_staging2
+  drop column row_num;
+
+#It is important to know that dropping a column is permanent and should only be performed on staged or duplicated tables.
+
+#At this point the data should be all set to move on to exploratory data analysis.
+
+
+
